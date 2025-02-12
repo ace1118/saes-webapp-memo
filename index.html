@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <base target="_top">
+    <title>School Memorandum</title>
+    <style>
+        body {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 14px;
+            text-align: center;
+            margin: 20px;
+            background-color: #f2faff;
+        }
+        h1 {
+            color: #000000;
+            background-color: #ffffff;
+            padding: 15px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+            border: 1px solid #ccc; /* Added border */
+        }
+        
+        input[type="file"] {
+            display: none;
+        }
+        .custom-file-upload, #submitBtn, .file-buttons button, #uploadMoreBtn {
+            border: 2px solid #359cff;
+            display: inline-block;
+            padding: 10px 20px;
+            cursor: pointer;
+            background-color: #359cff;
+            color: #ffffff;
+            border-radius: 25px;
+            font-size: 14px;
+            text-align: center;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        .custom-file-upload:hover, #submitBtn:hover, .file-buttons button:hover, #uploadMoreBtn:hover {
+            background-color: #ffffff;
+            color: #359cff;
+        }
+        #fileNameInput {
+            margin: 0 10px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        #resp {
+            margin-top: 10px;
+            font-weight: bold;
+        }
+        .card {
+            border: 1px solid #ccc;
+            padding: 15px;
+            max-height: 400px;
+            overflow-y: auto;
+            border-radius: 10px;
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+            margin-top: 30px;
+            background-color: #ffffff;
+        }
+        
+        .card::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        .card::-webkit-scrollbar-track {
+            background: #f2faff;
+            border-radius: 10px;
+        }
+        
+        .card::-webkit-scrollbar-thumb {
+            background: #9ed0ff;
+            border-radius: 10px;
+        }
+        
+        .card::-webkit-scrollbar-thumb:hover {
+            background: #359cff;
+        }
+
+        .file-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            text-align: left;
+        }
+        .file-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 5px; /* Reduced padding */
+            border-bottom: 1px solid #ccc;
+            margin-bottom: 5px; /* Added margin to separate items */
+        }
+        .file-name {
+            flex: 1;
+            text-align: left;
+        }
+        .file-buttons {
+            display: flex;
+            gap: 10px;
+        }
+        .file-buttons button {
+            border: 2px solid #359cff;
+            display: inline-block;
+            padding: 5px 10px; /* Reduced padding */
+            cursor: pointer;
+            background-color: #359cff;
+            color: #ffffff;
+            border-radius: 15px; /* Reduced border-radius */
+            font-size: 12px; /* Reduced font-size */
+            text-align: center;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        .file-buttons button:hover {
+            background-color: #ffffff;
+            color: #359cff;
+        }
+        
+        #searchInput {
+            margin-bottom: 20px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 14px;
+            width: 80%;
+        }
+
+        #deletePopup {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+            z-index: 1000;
+            text-align: center;
+        }
+        #deletePopup button {
+            margin: 10px;
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        #confirmDelete {
+            background-color: red;
+            color: white;
+        }
+        #cancelDelete {
+            background-color: gray;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <h1>SCHOOL MEMORANDUM</h1>
+    <div id="uploadActivity">
+        <form>
+            <label for="fileInput" class="custom-file-upload">Select Files</label>
+            <input type="file" id="fileInput" name="myFile" multiple>
+            <input type="text" id="fileNameInput" name="newFileName" placeholder="Enter New File Name">
+            <input type="button" id="submitBtn" value="Upload">
+            <label id="resp"></label>
+        </form>
+    </div>
+
+    <div id="loadingActivity" style="display: none;">
+        <h2>Uploading...</h2>
+    </div>
+
+    <div id="successActivity" style="display: none;">
+        <h2 id="uploadStatus"></h2>
+        <p>Your file has been successfully uploaded!</p>
+        <button id="uploadMoreBtn">Upload More</button>
+    </div>
+
+    <div class="card">
+        <input type="text" id="searchInput" placeholder="Search files...">
+        <ul class="file-list" id="fileList"></ul>
+    </div>
+
+    <div id="deletePopup">
+        <p>Are you sure you want to delete this file?</p>
+        <button id="confirmDelete">Yes, Delete</button>
+        <button id="cancelDelete">Cancel</button>
+    </div>
+
+    <script>
+        document.getElementById('fileInput').addEventListener('change', updateLabel);
+        document.getElementById('submitBtn').addEventListener('click', uploadFiles);
+        document.getElementById('uploadMoreBtn').addEventListener('click', showDefaultActivity);
+        document.getElementById('searchInput').addEventListener('input', filterFiles);
+
+        function updateLabel() {
+            var label = document.getElementById('fileInput');
+            var labelText = label.files.length === 1 ? label.files[0].name : label.files.length + ' files selected';
+            document.querySelector('.custom-file-upload').textContent = labelText;
+        }
+
+        function uploadFiles() {
+            showLoadingActivity();
+            google.script.run.withSuccessHandler(onSuccess).withFailureHandler(onFailure).uploadFiles(this.parentNode);
+        }
+
+        function showLoadingActivity() {
+            document.getElementById('uploadActivity').style.display = 'none';
+            document.getElementById('loadingActivity').style.display = 'block';
+        }
+
+        function onSuccess(data) {
+            hideLoadingActivity();
+            document.getElementById('successActivity').style.display = 'block';
+            document.getElementById('uploadStatus').textContent = "File Uploaded";
+
+            // Refresh the file list after upload
+            google.script.run.withSuccessHandler(displayFiles).getFilesInFolder();
+        }
+
+
+        function onFailure(error) {
+            hideLoadingActivity();
+            document.getElementById('uploadActivity').style.display = 'block';
+            document.getElementById('uploadStatus').textContent = "Upload Failed";
+        }
+
+        function hideLoadingActivity() {
+            document.getElementById('loadingActivity').style.display = 'none';
+        }
+
+        let deleteTarget = null;
+
+        function displayFiles() {
+            google.script.run.withSuccessHandler(updateFileList).getFilesInFolder();
+        }
+
+        function updateFileList(fileList) {
+            var list = document.getElementById('fileList');
+            list.innerHTML = '';
+
+            fileList.forEach(function(file) {
+                var listItem = document.createElement('li');
+                listItem.className = 'file-item';
+
+                var fileName = document.createElement('div');
+                fileName.className = 'file-name';
+                fileName.textContent = file.name;
+
+                var fileButtons = document.createElement('div');
+                fileButtons.className = 'file-buttons';
+                fileButtons.appendChild(createButton('View', file.id));
+                fileButtons.appendChild(createButton('Download', file.id));
+                fileButtons.appendChild(createDeleteButton(file.name, file.id));
+
+                listItem.appendChild(fileName);
+                listItem.appendChild(fileButtons);
+                list.appendChild(listItem);
+            });
+        }
+
+        function createButton(text, fileId) {
+            var button = document.createElement('button');
+            button.textContent = text;
+            button.className = 'custom-file-upload';
+            button.addEventListener('click', function() {
+                if (text === 'Download') {
+                    var link = 'https://drive.google.com/uc?export=download&id=' + fileId;
+                    window.location.href = link;
+                } else {
+                    var viewLink = 'https://drive.google.com/file/d/' + fileId;
+                    window.open(viewLink, '_blank');
+                }
+            });
+            return button;
+        }
+
+        function createDeleteButton(name, fileId) {
+            var button = document.createElement('button');
+            button.textContent = 'Delete';
+            button.style.backgroundColor = '#359cff';
+            button.style.color = 'white';
+            button.addEventListener('click', function() {
+                deleteTarget = { name: name, fileId: fileId, element: this.closest('.file-item') };
+                document.getElementById('deletePopup').style.display = 'block';
+            });
+            return button;
+        }
+
+        document.getElementById('confirmDelete').addEventListener('click', function() {
+            if (deleteTarget) {
+                google.script.run.withSuccessHandler(function(success) {
+                    if (success) {
+                        deleteTarget.element.remove();
+                        document.getElementById('deletePopup').style.display = 'none';
+                    } else {
+                        alert("Failed to delete file.");
+                    }
+                }).deleteFile(deleteTarget.fileId);
+            }
+        });
+
+        document.getElementById('cancelDelete').addEventListener('click', function() {
+            document.getElementById('deletePopup').style.display = 'none';
+            deleteTarget = null;
+        });
+
+        function showDefaultActivity() {
+            document.getElementById('uploadActivity').style.display = 'block';
+            document.getElementById('successActivity').style.display = 'none';
+            document.getElementById('uploadStatus').textContent = "";
+            document.querySelector('.custom-file-upload').textContent = "Select Files";
+            document.getElementById('fileNameInput').value = "";
+        }
+
+        function filterFiles() {
+            var query = document.getElementById('searchInput').value.toLowerCase();
+            var items = document.querySelectorAll('.file-item');
+
+            items.forEach(function(item) {
+                var fileName = item.querySelector('.file-name').textContent.toLowerCase();
+                if (fileName.includes(query)) {
+                    item.style.display = 'flex';
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+        }
+
+        window.onload = function() {
+            displayFiles();
+        };
+    </script>
+</body>
+</html>
